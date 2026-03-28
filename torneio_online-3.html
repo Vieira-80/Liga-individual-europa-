@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8">
+<title>Liga Individual Europa</title>
+
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js"></script>
+
+<style>
+body { font-family: Arial; background:#0f172a; color:white; padding:20px; }
+h1{text-align:center;}
+input{width:50px;}
+.primeira{background:#16a34a;}
+.segunda{background:#7f1d1d;}
+</style>
+
+</head>
+<body>
+
+<h1>LIGA INDIVIDUAL EUROPA</h1>
+
+<div id="login">
+<h3>Modo operador</h3>
+<input type="password" id="pass" placeholder="Código">
+<button onclick="login()">Entrar</button>
+</div>
+
+<div id="app"></div>
+
+<script>
+
+const PASSWORD = "1234";
+let editavel = false;
+
+function login(){
+  if(document.getElementById("pass").value === PASSWORD){
+    editavel = true;
+    document.getElementById("login").style.display="none";
+    criar();
+  } else {
+    alert("Código errado");
+  }
+}
+
+const firebaseConfig = {
+  apiKey: "AIzaSyAjGPkHEc1-srjVvI8rhfhsTP-prs0jNUE",
+  authDomain: "liga-individual-europa.firebaseapp.com",
+  databaseURL: "https://liga-individual-europa-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "liga-individual-europa"
+};
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
+const grupos = {
+  grupoA:["Maga","Gil","Monteiro","F. Carvalho","Rui","M. Alves","Diogo"],
+  grupoB:["Carrico","Europa","Osório","Fábio","Bezelga","Igor","Sousa"],
+  grupoC:["N. Vieira","Jorge António","Quim Zé","Cenário","Queirós","P. Jorge","Cristian"]
+};
+
+const jornadas = [
+ [[2,1],[3,7],[4,6]],
+ [[1,3],[7,4],[6,5]],
+ [[4,1],[3,2],[5,7]],
+ [[1,5],[2,4],[7,6]],
+ [[6,1],[5,2],[4,3]],
+ [[1,7],[2,6],[3,5]],
+ [[7,2],[6,3],[5,4]]
+];
+
+function criar(){
+
+  let html="";
+
+  Object.keys(grupos).forEach(id=>{
+    html+=`<h2>${id}</h2>`;
+
+    jornadas.forEach((jornada,j)=>{
+      html+=`<h3>Jornada ${j+1}</h3><table>`;
+
+      jornada.forEach((jogo,i)=>{
+        let p1=grupos[id][jogo[0]-1];
+        let p2=grupos[id][jogo[1]-1];
+
+        html+=`
+        <tr>
+          <td>${p1}</td>
+          <td>
+            <input ${editavel?"":"disabled"} data-id="${id}-${j}-${i}-1" onchange="guardar(this)">
+            -
+            <input ${editavel?"":"disabled"} data-id="${id}-${j}-${i}-2" onchange="guardar(this)">
+          </td>
+          <td>${p2}</td>
+        </tr>`;
+      });
+
+      html+="</table>";
+    });
+
+    html+=`<h3>Classificação</h3><table id="class-${id}"><tbody></tbody></table>`;
+  });
+
+  document.getElementById("app").innerHTML=html;
+}
+
+function guardar(input){
+  db.ref("resultados/"+input.dataset.id).set(input.value);
+}
+
+db.ref("resultados").on("value", snap=>{
+  let dados=snap.val()||{};
+
+  document.querySelectorAll("input").forEach(inp=>{
+    let val=dados[inp.dataset.id];
+    if(val!==undefined) inp.value=val;
+  });
+
+  calcular();
+});
+
+function calcular(){
+
+  Object.keys(grupos).forEach(id=>{
+    let stats={};
+    grupos[id].forEach(j=>stats[j]={pg:0,pp:0});
+
+    document.querySelectorAll(`input[data-id^="${id}"]`).forEach(inp=>{
+      let [g,j,i,l]=inp.dataset.id.split("-");
+      let inp2=document.querySelector(`[data-id="${g}-${j}-${i}-${l==1?2:1}"]`);
+
+      let a=Number(inp.value)||0;
+      let b=Number(inp2.value)||0;
+
+      let jogo=jornadas[j][i];
+      let p1=grupos[id][jogo[0]-1];
+      let p2=grupos[id][jogo[1]-1];
+
+      stats[p1].pg+=a;
+      stats[p1].pp+=b;
+      stats[p2].pg+=b;
+      stats[p2].pp+=a;
+    });
+
+    let lista=grupos[id].map(j=>({nome:j,pg:stats[j].pg,pp:stats[j].pp,pts:stats[j].pg}));
+    lista.sort((a,b)=>b.pts-a.pts);
+
+    let tbody=document.querySelector(`#class-${id} tbody`);
+    tbody.innerHTML="";
+
+    lista.forEach((j,idx)=>{
+      let classe=idx<4?"primeira":"segunda";
+      tbody.innerHTML+=`<tr class="${classe}">
+        <td>${idx+1}</td><td>${j.nome}</td><td>${j.pg}</td><td>${j.pp}</td><td>${j.pts}</td>
+      </tr>`;
+    });
+  });
+
+}
+
+criar();
+
+</script>
+
+</body>
+</html>
