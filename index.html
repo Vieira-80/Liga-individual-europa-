@@ -28,7 +28,11 @@ h1 { text-align:center; }
   margin-bottom:6px;
 }
 
-.jogador { width:40%; text-align:center; font-weight:bold; }
+.jogador {
+  width:40%;
+  text-align:center;
+  font-weight:bold;
+}
 
 input {
   width:40px;
@@ -55,12 +59,20 @@ button {
   padding:6px;
   color:white;
 }
+
+.legenda {
+  margin-top:20px;
+  font-size:14px;
+  opacity:0.8;
+}
 </style></head><body><h1>LIGA INDIVIDUAL EUROPA</h1><div id="login">
 <input type="password" id="pass" placeholder="Código">
 <button onclick="login()">Entrar</button>
-</div><div id="app"></div><script>
+</div><div id="app"></div><div class="legenda">
+<p>* Verde = Apuramento para 1ª categoria (Duplo KO)</p>
+<p>* Vermelho = 2ª categoria (Duplo KO)</p>
+</div><script>
 
-// 🔐 PASSWORD
 const PASSWORD = "1234";
 let editavel = false;
 
@@ -74,7 +86,6 @@ function login(){
   }
 }
 
-// 🔥 FIREBASE
 const firebaseConfig = {
   apiKey: "AIzaSyAjGPkHEc1-srjVvI8rhfhsTP-prs0jNUE",
   authDomain: "liga-individual-europa.firebaseapp.com",
@@ -85,7 +96,6 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
-// 🔥 DADOS
 const grupos = {
   grupoA:["Maga","Gil","Monteiro","F. Carvalho","Rui","M. Alves","Diogo"],
   grupoB:["Carriço","Europa","Osório","Fábio","Bezelga","Igor","Sousa"],
@@ -110,30 +120,34 @@ function criar(){
     html+=`<div class="card"><h2>${id.toUpperCase()}</h2>`;
 
     jornadas.forEach((jornada,j)=>{
-
       html+=`<h3>Jornada ${j+1}</h3>`;
 
       jornada.forEach((jogo,i)=>{
-
         let p1=grupos[id][jogo[0]-1];
         let p2=grupos[id][jogo[1]-1];
 
+        let a = Number(document.querySelector(`[data-id="${id}-${j}-${i}-1"]`)?.value)||0;
+        let b = Number(document.querySelector(`[data-id="${id}-${j}-${i}-2"]`)?.value)||0;
+
+        let c1="", c2="";
+        if(a>b){ c1="vencedor"; c2="derrotado"; }
+        else if(b>a){ c2="vencedor"; c1="derrotado"; }
+
         html+=`
         <div class="jogo">
-          <div class="jogador">${p1}</div>
+          <div class="jogador ${c1}">${p1}</div>
           <div>
             <input data-id="${id}-${j}-${i}-1">
             -
             <input data-id="${id}-${j}-${i}-2">
           </div>
-          <div class="jogador">${p2}</div>
+          <div class="jogador ${c2}">${p2}</div>
         </div>`;
       });
-
     });
 
     html+=`<table id="class-${id}">
-    <tr><th>#</th><th>Jogador</th><th>Pts</th></tr>
+    <tr><th>#</th><th>Jogador</th><th>PG</th><th>PP</th><th>Pts</th></tr>
     </table></div>`;
   });
 
@@ -175,7 +189,7 @@ function calcular(){
     let stats={};
 
     grupos[id].forEach(j=>{
-      stats[j]=0;
+      stats[j]={pg:0,pp:0};
     });
 
     jornadas.forEach((jornada,j)=>{
@@ -190,16 +204,24 @@ function calcular(){
         let va=Number(a?.value)||0;
         let vb=Number(b?.value)||0;
 
-        stats[p1]+=va;
-        stats[p2]+=vb;
+        stats[p1].pg+=va;
+        stats[p1].pp+=vb;
+        stats[p2].pg+=vb;
+        stats[p2].pp+=va;
       });
     });
 
-    let lista=Object.keys(stats).map(n=>({nome:n,pts:stats[n]}));
+    let lista=Object.keys(stats).map(n=>({
+      nome:n,
+      pg:stats[n].pg,
+      pp:stats[n].pp,
+      pts:stats[n].pg
+    }));
+
     lista.sort((a,b)=>b.pts-a.pts);
 
     let t=document.getElementById("class-"+id);
-    t.innerHTML="<tr><th>#</th><th>Jogador</th><th>Pts</th></tr>";
+    t.innerHTML="<tr><th>#</th><th>Jogador</th><th>PG</th><th>PP</th><th>Pts</th></tr>";
 
     lista.forEach((j,idx)=>{
       let c = idx<4?"top4":"ultimos";
@@ -209,6 +231,8 @@ function calcular(){
       <tr class="${c} ${l}">
         <td>${idx+1}</td>
         <td>${j.nome}</td>
+        <td>${j.pg}</td>
+        <td>${j.pp}</td>
         <td>${j.pts}</td>
       </tr>`;
     });
