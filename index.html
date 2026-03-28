@@ -177,10 +177,10 @@ function criar(){
 
     html+=`<div class="tabela">
     <table id="class-${id}">
-    <tr><th>#</th><th>Jogador</th><th>PG</th><th>PP</th><th>Pts</th></tr>
+    <tr><th>#</th><th>Jogador</th><th>JG</th><th>PG</th><th>PP</th><th>Pts</th></tr>
     </table>
     <div class="legenda">
-      <p>* Azul = Top 4 (1ª categoria - Duplo KO)</p>
+      <p>* Azul = Top 4 (1ª categoria)</p>
       <p>* Restantes = 2ª categoria</p>
     </div>
     </div></div>`;
@@ -220,10 +220,11 @@ function aplicarPermissoes(){
 function calcular(){
 
   Object.keys(grupos).forEach(id=>{
-    let stats={};
+    let stats={}, confrontos={};
 
     grupos[id].forEach(j=>{
-      stats[j]={pg:0,pp:0};
+      stats[j]={pg:0,pp:0,jg:0};
+      confrontos[j]={};
     });
 
     jornadas.forEach((jornada,j)=>{
@@ -232,27 +233,51 @@ function calcular(){
         let p1=grupos[id][jogo[0]-1];
         let p2=grupos[id][jogo[1]-1];
 
-        let a = Number(dadosGlobais[`${id}-${j}-${i}-1`]||0);
-        let b = Number(dadosGlobais[`${id}-${j}-${i}-2`]||0);
+        let a = dadosGlobais[`${id}-${j}-${i}-1`];
+        let b = dadosGlobais[`${id}-${j}-${i}-2`];
 
-        stats[p1].pg+=a;
-        stats[p1].pp+=b;
-        stats[p2].pg+=b;
-        stats[p2].pp+=a;
+        if(a !== "" && b !== "" && a !== undefined && b !== undefined){
+
+          let va = Number(a);
+          let vb = Number(b);
+
+          stats[p1].pg += va;
+          stats[p1].pp += vb;
+          stats[p2].pg += vb;
+          stats[p2].pp += va;
+
+          stats[p1].jg += 1;
+          stats[p2].jg += 1;
+
+          confrontos[p1][p2] = va - vb;
+          confrontos[p2][p1] = vb - va;
+        }
+
       });
     });
 
-    let lista=Object.keys(stats).map(n=>({
-      nome:n,
-      pg:stats[n].pg,
-      pp:stats[n].pp,
-      pts:stats[n].pg
+    let lista = grupos[id].map(j=>({
+      nome:j,
+      pg:stats[j].pg,
+      pp:stats[j].pp,
+      jg:stats[j].jg,
+      pts:stats[j].pg,
+      diff:stats[j].pg - stats[j].pp
     }));
 
-    lista.sort((a,b)=>b.pts-a.pts);
+    lista.sort((a,b)=>{
+      if(b.pts !== a.pts) return b.pts - a.pts;
+
+      let cd = confrontos[a.nome]?.[b.nome];
+      if(cd !== undefined && cd !== 0){
+        return -cd;
+      }
+
+      return b.diff - a.diff;
+    });
 
     let t=document.getElementById("class-"+id);
-    t.innerHTML="<tr><th>#</th><th>Jogador</th><th>PG</th><th>PP</th><th>Pts</th></tr>";
+    t.innerHTML="<tr><th>#</th><th>Jogador</th><th>JG</th><th>PG</th><th>PP</th><th>Pts</th></tr>";
 
     lista.forEach((j,idx)=>{
       let c = idx<4?"top4":"ultimos";
@@ -262,6 +287,7 @@ function calcular(){
       <tr class="${c} ${l}">
         <td>${idx+1}</td>
         <td>${j.nome}</td>
+        <td>${j.jg}</td>
         <td>${j.pg}</td>
         <td>${j.pp}</td>
         <td>${j.pts}</td>
