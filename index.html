@@ -1,35 +1,21 @@
-<!DOCTYPE html>
-<html lang="pt">
+<!DOCTYPE html><html lang="pt">
 <head>
 <meta charset="UTF-8">
-<title>Liga Individual Europa</title>
-
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
-
-<style>
+<title>Liga Individual Europa</title><script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script><script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script><style>
 body { font-family: Arial; background:#0f172a; color:white; padding:20px; }
 h1{text-align:center;}
-input{width:50px;}
+table{width:100%; margin-bottom:20px;}
+td{padding:5px;}
+input{width:40px; text-align:center;}
 .primeira{background:#16a34a;}
 .segunda{background:#7f1d1d;}
-</style>
-
-</head>
-<body>
-
-<h1>LIGA INDIVIDUAL EUROPA</h1>
-
-<div id="login">
+</style></head><body><h1>LIGA INDIVIDUAL EUROPA</h1><div id="login">
 <h3>Modo operador</h3>
 <input type="password" id="pass" placeholder="Código">
 <button onclick="login()">Entrar</button>
-</div>
+</div><div id="app"></div><script>
 
-<div id="app"></div>
-
-<script>
-
+// 🔐 PASSWORD
 const PASSWORD = "1234";
 let editavel = false;
 
@@ -43,6 +29,7 @@ function login(){
   }
 }
 
+// 🔥 FIREBASE
 const firebaseConfig = {
   apiKey: "AIzaSyAjGPkHEc1-srjVvI8rhfhsTP-prs0jNUE",
   authDomain: "liga-individual-europa.firebaseapp.com",
@@ -53,6 +40,7 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
+// 🔥 DADOS
 const grupos = {
   grupoA:["Maga","Gil","Monteiro","F. Carvalho","Rui","M. Alves","Diogo"],
   grupoB:["Carrico","Europa","Osório","Fábio","Bezelga","Igor","Sousa"],
@@ -69,6 +57,7 @@ const jornadas = [
  [[7,2],[6,3],[5,4]]
 ];
 
+// 🔥 CRIAR UI
 function criar(){
 
   let html="";
@@ -98,16 +87,21 @@ function criar(){
       html+="</table>";
     });
 
-    html+=`<h3>Classificação</h3><table id="class-${id}"><tbody></tbody></table>`;
+    html+=`<h3>Classificação</h3>
+    <table id="class-${id}">
+    <tr><th>#</th><th>Jogador</th><th>PG</th><th>PP</th><th>Pontos</th></tr>
+    </table>`;
   });
 
   document.getElementById("app").innerHTML=html;
 }
 
+// 🔥 GUARDAR
 function guardar(input){
   db.ref("resultados/"+input.dataset.id).set(input.value);
 }
 
+// 🔥 REALTIME
 db.ref("resultados").on("value", snap=>{
   let dados=snap.val()||{};
 
@@ -119,48 +113,61 @@ db.ref("resultados").on("value", snap=>{
   calcular();
 });
 
+// 🔥 CALCULAR
 function calcular(){
 
   Object.keys(grupos).forEach(id=>{
     let stats={};
     grupos[id].forEach(j=>stats[j]={pg:0,pp:0});
 
-    document.querySelectorAll(`input[data-id^="${id}"]`).forEach(inp=>{
-      let [g,j,i,l]=inp.dataset.id.split("-");
-      let inp2=document.querySelector(`[data-id="${g}-${j}-${i}-${l==1?2:1}"]`);
+    jornadas.forEach((jornada,j)=>{
+      jornada.forEach((jogo,i)=>{
+        let p1=grupos[id][jogo[0]-1];
+        let p2=grupos[id][jogo[1]-1];
 
-      let a=Number(inp.value)||0;
-      let b=Number(inp2.value)||0;
+        let a=document.querySelector(`[data-id="${id}-${j}-${i}-1"]`);
+        let b=document.querySelector(`[data-id="${id}-${j}-${i}-2"]`);
 
-      let jogo=jornadas[j][i];
-      let p1=grupos[id][jogo[0]-1];
-      let p2=grupos[id][jogo[1]-1];
+        let va=Number(a?.value)||0;
+        let vb=Number(b?.value)||0;
 
-      stats[p1].pg+=a;
-      stats[p1].pp+=b;
-      stats[p2].pg+=b;
-      stats[p2].pp+=a;
+        stats[p1].pg+=va;
+        stats[p1].pp+=vb;
+        stats[p2].pg+=vb;
+        stats[p2].pp+=va;
+      });
     });
 
-    let lista=grupos[id].map(j=>({nome:j,pg:stats[j].pg,pp:stats[j].pp,pts:stats[j].pg}));
+    let lista=grupos[id].map(j=>({
+      nome:j,
+      pg:stats[j].pg,
+      pp:stats[j].pp,
+      pts:stats[j].pg
+    }));
+
     lista.sort((a,b)=>b.pts-a.pts);
 
-    let tbody=document.querySelector(`#class-${id} tbody`);
-    tbody.innerHTML="";
+    let tabela=document.getElementById("class-"+id);
+    tabela.innerHTML=`<tr><th>#</th><th>Jogador</th><th>PG</th><th>PP</th><th>Pontos</th></tr>`;
 
     lista.forEach((j,idx)=>{
       let classe=idx<4?"primeira":"segunda";
-      tbody.innerHTML+=`<tr class="${classe}">
-        <td>${idx+1}</td><td>${j.nome}</td><td>${j.pg}</td><td>${j.pp}</td><td>${j.pts}</td>
+      tabela.innerHTML+=`
+      <tr class="${classe}">
+        <td>${idx+1}</td>
+        <td>${j.nome}</td>
+        <td>${j.pg}</td>
+        <td>${j.pp}</td>
+        <td>${j.pts}</td>
       </tr>`;
     });
   });
-
 }
 
-criar();
+// 🔥 ARRANQUE
+window.onload = () => {
+  criar();
+};
 
-</script>
-
-</body>
+</script></body>
 </html>
