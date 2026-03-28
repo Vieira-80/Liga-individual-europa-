@@ -9,7 +9,13 @@ body {
   padding:15px;
 }
 
-h1 { text-align:center; }
+h1 { text-align:center; margin-top:10px; }
+
+.logo {
+  display:block;
+  margin:0 auto;
+  max-width:180px;
+}
 
 .card {
   background:#0f172a;
@@ -35,28 +41,60 @@ h1 { text-align:center; }
 }
 
 input {
-  width:40px;
+  width:45px;
   text-align:center;
   border-radius:6px;
   border:none;
   background:#1e293b;
   color:white;
+  font-size:16px;
 }
 
 .vencedor { color:#22c55e; }
 .derrotado { color:#ef4444; }
 
-.top4 { background:#064e3b; }
+.tabela {
+  margin-top:10px;
+  background:#020617;
+  border-radius:10px;
+  padding:10px;
+}
+
+.tabela table {
+  width:100%;
+  border-collapse:collapse;
+}
+
+.tabela th {
+  background:#1e293b;
+}
+
+.tabela th, .tabela td {
+  padding:8px;
+  text-align:center;
+}
+
+.top4 { background:#065f46; }
 .ultimos { background:#7f1d1d; }
 
-.linha { border-bottom:2px solid yellow; }
+.linha { border-bottom:2px solid #facc15; }
 
-#login { text-align:center; margin-bottom:10px; }
+#login {
+  text-align:center;
+  margin-bottom:15px;
+}
+
+#pass {
+  padding:6px;
+  border-radius:6px;
+  border:none;
+}
 
 button {
   background:#2563eb;
   border:none;
-  padding:6px;
+  padding:6px 10px;
+  border-radius:6px;
   color:white;
 }
 
@@ -64,12 +102,13 @@ button {
   margin-top:20px;
   font-size:14px;
   opacity:0.8;
+  text-align:center;
 }
-</style></head><body><h1>LIGA INDIVIDUAL EUROPA</h1><div id="login">
-<input type="password" id="pass" placeholder="Código">
+</style></head><body><img src="https://i.imgur.com/7yUvePI.png" class="logo"><h1>LIGA INDIVIDUAL EUROPA</h1><div id="login">
+<input type="password" id="pass" placeholder="Código operador">
 <button onclick="login()">Entrar</button>
 </div><div id="app"></div><div class="legenda">
-<p>* Verde = Apuramento para 1ª categoria (Duplo KO)</p>
+<p>* Verde = 1ª categoria (Duplo KO)</p>
 <p>* Vermelho = 2ª categoria (Duplo KO)</p>
 </div><script>
 
@@ -77,7 +116,8 @@ const PASSWORD = "1234";
 let editavel = false;
 
 function login(){
-  if(document.getElementById("pass").value === PASSWORD){
+  let campo = document.getElementById("pass");
+  if(campo.value === PASSWORD){
     editavel = true;
     document.getElementById("login").style.display="none";
     aplicarPermissoes();
@@ -112,6 +152,8 @@ const jornadas = [
  [[7,2],[6,3],[5,4]]
 ];
 
+let dadosGlobais = {};
+
 function criar(){
   let html="";
 
@@ -123,11 +165,12 @@ function criar(){
       html+=`<h3>Jornada ${j+1}</h3>`;
 
       jornada.forEach((jogo,i)=>{
+
         let p1=grupos[id][jogo[0]-1];
         let p2=grupos[id][jogo[1]-1];
 
-        let a = Number(document.querySelector(`[data-id="${id}-${j}-${i}-1"]`)?.value)||0;
-        let b = Number(document.querySelector(`[data-id="${id}-${j}-${i}-2"]`)?.value)||0;
+        let a = Number(dadosGlobais[`${id}-${j}-${i}-1`]||0);
+        let b = Number(dadosGlobais[`${id}-${j}-${i}-2`]||0);
 
         let c1="", c2="";
         if(a>b){ c1="vencedor"; c2="derrotado"; }
@@ -137,49 +180,49 @@ function criar(){
         <div class="jogo">
           <div class="jogador ${c1}">${p1}</div>
           <div>
-            <input data-id="${id}-${j}-${i}-1">
+            <input data-id="${id}-${j}-${i}-1" value="${a}">
             -
-            <input data-id="${id}-${j}-${i}-2">
+            <input data-id="${id}-${j}-${i}-2" value="${b}">
           </div>
           <div class="jogador ${c2}">${p2}</div>
         </div>`;
       });
     });
 
-    html+=`<table id="class-${id}">
+    html+=`<div class="tabela">
+    <table id="class-${id}">
     <tr><th>#</th><th>Jogador</th><th>PG</th><th>PP</th><th>Pts</th></tr>
-    </table></div>`;
+    </table></div></div>`;
   });
 
   document.getElementById("app").innerHTML=html;
+
+  aplicarPermissoes();
+  calcular();
 }
 
 function guardar(){
   if(!editavel) return;
 
-  let dados={};
   document.querySelectorAll("input").forEach(i=>{
-    dados[i.dataset.id]=i.value;
+    dadosGlobais[i.dataset.id]=i.value;
   });
 
-  db.ref("resultados").set(dados);
+  db.ref("resultados").set(dadosGlobais);
 }
 
 db.ref("resultados").on("value", snap=>{
-  let dados=snap.val()||{};
+  dadosGlobais = snap.val() || {};
+  criar();
 
   document.querySelectorAll("input").forEach(i=>{
-    i.value=dados[i.dataset.id]||"";
-    i.oninput=guardar;
+    i.oninput = guardar;
   });
-
-  calcular();
-  aplicarPermissoes();
 });
 
 function aplicarPermissoes(){
   document.querySelectorAll("input").forEach(i=>{
-    i.disabled=!editavel;
+    i.disabled = !editavel;
   });
 }
 
@@ -198,16 +241,13 @@ function calcular(){
         let p1=grupos[id][jogo[0]-1];
         let p2=grupos[id][jogo[1]-1];
 
-        let a=document.querySelector(`[data-id="${id}-${j}-${i}-1"]`);
-        let b=document.querySelector(`[data-id="${id}-${j}-${i}-2"]`);
+        let a = Number(dadosGlobais[`${id}-${j}-${i}-1`]||0);
+        let b = Number(dadosGlobais[`${id}-${j}-${i}-2`]||0);
 
-        let va=Number(a?.value)||0;
-        let vb=Number(b?.value)||0;
-
-        stats[p1].pg+=va;
-        stats[p1].pp+=vb;
-        stats[p2].pg+=vb;
-        stats[p2].pp+=va;
+        stats[p1].pg+=a;
+        stats[p1].pp+=b;
+        stats[p2].pg+=b;
+        stats[p2].pp+=a;
       });
     });
 
@@ -221,7 +261,6 @@ function calcular(){
     lista.sort((a,b)=>b.pts-a.pts);
 
     let t=document.getElementById("class-"+id);
-    t.innerHTML="<tr><th>#</th><th>Jogador</th><th>PG</th><th>PP</th><th>Pts</th></tr>";
 
     lista.forEach((j,idx)=>{
       let c = idx<4?"top4":"ultimos";
@@ -238,8 +277,6 @@ function calcular(){
     });
   });
 }
-
-window.onload=criar;
 
 </script></body>
 </html>
