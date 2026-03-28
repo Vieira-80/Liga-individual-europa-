@@ -11,6 +11,17 @@ body {
 
 h1 { text-align:center; }
 
+#adminBtn {
+  position:fixed;
+  top:10px;
+  right:10px;
+  background:transparent;
+  border:none;
+  color:#64748b;
+  font-size:16px;
+  opacity:0.6;
+}
+
 .card {
   background:#0f172a;
   border-radius:12px;
@@ -60,7 +71,9 @@ input {
 }
 
 .tabela th {
-  background:#1e293b;
+  background:#0f172a;
+  color:#94a3b8;
+  font-weight:600;
 }
 
 .tabela th, .tabela td {
@@ -68,33 +81,20 @@ input {
   text-align:center;
 }
 
-.top4 { background:#065f46; }
-.ultimos { background:#7f1d1d; }
+.top4 { background:#1e3a8a; }
+.ultimos { background:#020617; }
 
 .linha { border-bottom:2px solid #facc15; }
 
-button {
-  display:block;
-  margin:0 auto 15px;
-  background:#2563eb;
-  border:none;
-  padding:8px 12px;
-  border-radius:6px;
-  color:white;
-}
-
 .legenda {
-  margin-top:20px;
-  font-size:14px;
+  margin-top:10px;
+  font-size:13px;
   opacity:0.8;
   text-align:center;
 }
-</style></head><body><h1>LIGA INDIVIDUAL EUROPA</h1><button onclick="login()">Entrar modo operador</button>
+</style></head><body><button id="adminBtn" onclick="login()">⚙️</button>
 
-<div id="app"></div><div class="legenda">
-<p>* Verde = 1ª categoria (Duplo KO)</p>
-<p>* Vermelho = 2ª categoria (Duplo KO)</p>
-</div><script>
+<h1>LIGA INDIVIDUAL EUROPA</h1><div id="app"></div><script>
 
 const PASSWORD = "1234";
 let editavel = false;
@@ -178,7 +178,12 @@ function criar(){
     html+=`<div class="tabela">
     <table id="class-${id}">
     <tr><th>#</th><th>Jogador</th><th>PG</th><th>PP</th><th>Pts</th></tr>
-    </table></div></div>`;
+    </table>
+    <div class="legenda">
+      <p>* Azul = Top 4 (1ª categoria - Duplo KO)</p>
+      <p>* Restantes = 2ª categoria</p>
+    </div>
+    </div></div>`;
   });
 
   document.getElementById("app").innerHTML=html;
@@ -253,10 +258,12 @@ function calcular(){
       let c = idx<4?"top4":"ultimos";
       let l = idx===3?"linha":"";
 
+      let medalha = idx<4 ? "🏆 " : "";
+
       t.innerHTML+=`
       <tr class="${c} ${l}">
         <td>${idx+1}</td>
-        <td>${j.nome}</td>
+        <td>${medalha}${j.nome}</td>
         <td>${j.pg}</td>
         <td>${j.pp}</td>
         <td>${j.pts}</td>
