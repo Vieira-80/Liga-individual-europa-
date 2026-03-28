@@ -2,16 +2,9 @@
 <head>
 <meta charset="UTF-8">
 <title>Liga Individual Europa</title><script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script><script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script><style>
-body {
-  font-family: Arial;
-  background:#0f172a;
-  color:white;
-  padding:20px;
-}
+body { font-family: Arial; background:#0f172a; color:white; padding:20px; }
 
 h1 { text-align:center; }
-
-h2 { margin-top:40px; }
 
 table {
   width:100%;
@@ -35,7 +28,33 @@ input {
 .segunda { background:#7f1d1d; }
 .linha { border-bottom:3px solid yellow; }
 
-</style></head><body><h1>LIGA INDIVIDUAL EUROPA</h1><div id="app"></div><script>
+#login { text-align:center; margin-bottom:20px; }
+
+button {
+  padding:6px 12px;
+  border:none;
+  background:#2563eb;
+  color:white;
+  cursor:pointer;
+}
+</style></head><body><h1>LIGA INDIVIDUAL EUROPA</h1><div id="login">
+<input type="password" id="pass" placeholder="Código operador">
+<button onclick="login()">Entrar</button>
+</div><div id="app"></div><script>
+
+// 🔐 PASSWORD
+const PASSWORD = "1234"; // MUDA ISTO
+let editavel = false;
+
+function login(){
+  if(document.getElementById("pass").value === PASSWORD){
+    editavel = true;
+    document.getElementById("login").style.display="none";
+    aplicarPermissoes();
+  } else {
+    alert("Código errado");
+  }
+}
 
 // 🔥 FIREBASE
 const firebaseConfig = {
@@ -51,7 +70,7 @@ const db = firebase.database();
 // 🔥 DADOS
 const grupos = {
   grupoA:["Maga","Gil","Monteiro","F. Carvalho","Rui","M. Alves","Diogo"],
-  grupoB:["Carrico","Europa","Osório","Fábio","Bezelga","Igor","Sousa"],
+  grupoB:["Carriço","Europa","Osório","Fábio","Bezelga","Igor","Sousa"],
   grupoC:["N. Vieira","Jorge António","Quim Zé","Cenário","Queirós","P. Jorge","Cristian"]
 };
 
@@ -65,7 +84,7 @@ const jornadas = [
  [[7,2],[6,3],[5,4]]
 ];
 
-// 🔥 UI
+// 🔥 CRIAR UI
 function criar(){
 
   let html="";
@@ -97,7 +116,7 @@ function criar(){
 
     html+=`<h3>Classificação</h3>
     <table id="class-${id}">
-    <tr><th>#</th><th>Jogador</th><th>PG</th><th>PP</th><th>Pts</th></tr>
+    <tr><th>#</th><th>Jogador</th><th>PG</th><th>PP</th><th>Pts</th><th>Forma</th></tr>
     </table>`;
   });
 
@@ -106,8 +125,9 @@ function criar(){
 
 // 🔥 GUARDAR
 function guardar(){
-  let dados={};
+  if(!editavel) return;
 
+  let dados={};
   document.querySelectorAll("input").forEach(inp=>{
     dados[inp.dataset.id]=inp.value;
   });
@@ -125,16 +145,25 @@ db.ref("resultados").on("value", snap=>{
   });
 
   calcular();
+  aplicarPermissoes();
 });
+
+// 🔥 BLOQUEAR INPUTS
+function aplicarPermissoes(){
+  document.querySelectorAll("input").forEach(inp=>{
+    inp.disabled = !editavel;
+  });
+}
 
 // 🔥 CALCULAR
 function calcular(){
 
   Object.keys(grupos).forEach(id=>{
-    let stats={};
+    let stats={}, historico={};
 
     grupos[id].forEach(j=>{
       stats[j]={pg:0,pp:0};
+      historico[j]=[];
     });
 
     jornadas.forEach((jornada,j)=>{
@@ -152,6 +181,9 @@ function calcular(){
         stats[p1].pp+=vb;
         stats[p2].pg+=vb;
         stats[p2].pp+=va;
+
+        if(va>vb){ historico[p1].push("V"); historico[p2].push("D"); }
+        else if(vb>va){ historico[p2].push("V"); historico[p1].push("D"); }
       });
     });
 
@@ -159,17 +191,23 @@ function calcular(){
       nome:j,
       pg:stats[j].pg,
       pp:stats[j].pp,
-      pts:stats[j].pg
+      pts:stats[j].pg,
+      diff:stats[j].pg-stats[j].pp
     }));
 
-    lista.sort((a,b)=>b.pts-a.pts);
+    lista.sort((a,b)=>{
+      if(b.pts!==a.pts) return b.pts-a.pts;
+      return b.diff-a.diff;
+    });
 
     let tabela=document.getElementById("class-"+id);
-    tabela.innerHTML=`<tr><th>#</th><th>Jogador</th><th>PG</th><th>PP</th><th>Pts</th></tr>`;
+    tabela.innerHTML=`<tr><th>#</th><th>Jogador</th><th>PG</th><th>PP</th><th>Pts</th><th>Forma</th></tr>`;
 
     lista.forEach((j,idx)=>{
       let classe=idx<4?"primeira":"segunda";
       let linha = idx===3?"linha":"";
+
+      let forma = historico[j.nome].slice(-5).map(r=> r==="V"?"🟢":"🔴").join("");
 
       tabela.innerHTML+=`
       <tr class="${classe} ${linha}">
@@ -178,6 +216,7 @@ function calcular(){
         <td>${j.pg}</td>
         <td>${j.pp}</td>
         <td>${j.pts}</td>
+        <td>${forma}</td>
       </tr>`;
     });
   });
