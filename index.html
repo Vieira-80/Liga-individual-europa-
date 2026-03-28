@@ -3,91 +3,39 @@
 <meta charset="UTF-8">
 <title>Liga Individual Europa</title><script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script><script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script><style>
 body {
-  font-family: Arial, sans-serif;
+  font-family: Arial;
   background:#0f172a;
   color:white;
   padding:20px;
 }
 
-h1 { text-align:center; margin-bottom:30px; }
+h1 { text-align:center; }
 
-h2 {
-  margin-top:40px;
-  border-bottom:2px solid #334155;
-  padding-bottom:5px;
-}
-
-h3 { margin-top:20px; color:#cbd5f5; }
+h2 { margin-top:40px; }
 
 table {
   width:100%;
   border-collapse:collapse;
   margin-bottom:20px;
   background:#1e293b;
-  border-radius:10px;
-  overflow:hidden;
 }
 
-td, th { padding:12px; text-align:center; }
-
-tr { border-bottom:1px solid #334155; }
-tr:last-child { border-bottom:none; }
+td, th {
+  padding:8px;
+  text-align:center;
+  border:1px solid #334155;
+}
 
 input {
-  width:45px;
-  padding:6px;
+  width:40px;
   text-align:center;
-  border-radius:6px;
-  border:none;
-  background:#020617;
-  color:white;
-  font-weight:bold;
 }
 
-td.primeira { background:#065f46; }
-td.segunda { background:#7f1d1d; }
-
-.primeira { background:#064e3b; }
+.primeira { background:#065f46; }
 .segunda { background:#7f1d1d; }
+.linha { border-bottom:3px solid yellow; }
 
-.linha-apuramento {
-  border-bottom:3px solid #facc15 !important;
-}
-
-#login {
-  text-align:center;
-  margin-bottom:30px;
-}
-
-button {
-  padding:6px 12px;
-  border:none;
-  border-radius:6px;
-  background:#2563eb;
-  color:white;
-  cursor:pointer;
-}
-
-button:hover { background:#1d4ed8; }
-</style></head><body><h1>LIGA INDIVIDUAL EUROPA</h1><div id="login">
-<h3>Modo operador</h3>
-<input type="password" id="pass" placeholder="Código">
-<button onclick="login()">Entrar</button>
-</div><div id="app"></div><script>
-
-// 🔐 PASSWORD
-const PASSWORD = "1234";
-let editavel = false;
-
-function login(){
-  if(document.getElementById("pass").value === PASSWORD){
-    editavel = true;
-    document.getElementById("login").style.display="none";
-    criar();
-  } else {
-    alert("Código errado");
-  }
-}
+</style></head><body><h1>LIGA INDIVIDUAL EUROPA</h1><div id="app"></div><script>
 
 // 🔥 FIREBASE
 const firebaseConfig = {
@@ -103,7 +51,7 @@ const db = firebase.database();
 // 🔥 DADOS
 const grupos = {
   grupoA:["Maga","Gil","Monteiro","F. Carvalho","Rui","M. Alves","Diogo"],
-  grupoB:["Carriço","Europa","Osório","Fábio","Bezelga","Igor","Sousa"],
+  grupoB:["Carrico","Europa","Osório","Fábio","Bezelga","Igor","Sousa"],
   grupoC:["N. Vieira","Jorge António","Quim Zé","Cenário","Queirós","P. Jorge","Cristian"]
 };
 
@@ -123,7 +71,7 @@ function criar(){
   let html="";
 
   Object.keys(grupos).forEach(id=>{
-    html+=`<h2>${id.toUpperCase()}</h2>`;
+    html+=`<h2>${id}</h2>`;
 
     jornadas.forEach((jornada,j)=>{
       html+=`<h3>Jornada ${j+1}</h3><table>`;
@@ -132,29 +80,15 @@ function criar(){
         let p1=grupos[id][jogo[0]-1];
         let p2=grupos[id][jogo[1]-1];
 
-        let a = Number(document.querySelector(`[data-id="${id}-${j}-${i}-1"]`)?.value) || 0;
-        let b = Number(document.querySelector(`[data-id="${id}-${j}-${i}-2"]`)?.value) || 0;
-
-        let classe1 = "";
-        let classe2 = "";
-
-        if(a > b){
-          classe1 = "primeira";
-          classe2 = "segunda";
-        } else if(b > a){
-          classe2 = "primeira";
-          classe1 = "segunda";
-        }
-
         html+=`
         <tr>
-          <td class="${classe1}"><strong>${p1}</strong></td>
+          <td>${p1}</td>
           <td>
-            <input ${editavel?"":"disabled"} data-id="${id}-${j}-${i}-1" onchange="guardar(this)">
+            <input data-id="${id}-${j}-${i}-1">
             -
-            <input ${editavel?"":"disabled"} data-id="${id}-${j}-${i}-2" onchange="guardar(this)">
+            <input data-id="${id}-${j}-${i}-2">
           </td>
-          <td class="${classe2}"><strong>${p2}</strong></td>
+          <td>${p2}</td>
         </tr>`;
       });
 
@@ -163,7 +97,7 @@ function criar(){
 
     html+=`<h3>Classificação</h3>
     <table id="class-${id}">
-    <tr><th>#</th><th>Jogador</th><th>PG</th><th>PP</th><th>Pts</th><th>Forma</th></tr>
+    <tr><th>#</th><th>Jogador</th><th>PG</th><th>PP</th><th>Pts</th></tr>
     </table>`;
   });
 
@@ -171,17 +105,23 @@ function criar(){
 }
 
 // 🔥 GUARDAR
-function guardar(input){
-  db.ref("resultados/"+input.dataset.id).set(input.value);
+function guardar(){
+  let dados={};
+
+  document.querySelectorAll("input").forEach(inp=>{
+    dados[inp.dataset.id]=inp.value;
+  });
+
+  db.ref("resultados").set(dados);
 }
 
-// 🔥 REALTIME
+// 🔥 CARREGAR
 db.ref("resultados").on("value", snap=>{
   let dados=snap.val()||{};
 
   document.querySelectorAll("input").forEach(inp=>{
-    let val=dados[inp.dataset.id];
-    if(val!==undefined) inp.value=val;
+    inp.value = dados[inp.dataset.id] || "";
+    inp.oninput = guardar;
   });
 
   calcular();
@@ -191,11 +131,10 @@ db.ref("resultados").on("value", snap=>{
 function calcular(){
 
   Object.keys(grupos).forEach(id=>{
-    let stats={}, confrontos={};
+    let stats={};
 
     grupos[id].forEach(j=>{
       stats[j]={pg:0,pp:0};
-      confrontos[j]={};
     });
 
     jornadas.forEach((jornada,j)=>{
@@ -213,9 +152,6 @@ function calcular(){
         stats[p1].pp+=vb;
         stats[p2].pg+=vb;
         stats[p2].pp+=va;
-
-        confrontos[p1][p2]=va-vb;
-        confrontos[p2][p1]=vb-va;
       });
     });
 
@@ -223,78 +159,27 @@ function calcular(){
       nome:j,
       pg:stats[j].pg,
       pp:stats[j].pp,
-      pts:stats[j].pg,
-      diff:stats[j].pg - stats[j].pp
+      pts:stats[j].pg
     }));
 
-    lista.sort((a,b)=>{
-      if(b.pts !== a.pts) return b.pts - a.pts;
-      if(b.diff !== a.diff) return b.diff - a.diff;
-      let cd = confrontos[a.nome]?.[b.nome] || 0;
-      return -cd;
-    });
+    lista.sort((a,b)=>b.pts-a.pts);
 
     let tabela=document.getElementById("class-"+id);
-    tabela.innerHTML=`<tr><th>#</th><th>Jogador</th><th>PG</th><th>PP</th><th>Pts</th><th>Forma</th></tr>`;
+    tabela.innerHTML=`<tr><th>#</th><th>Jogador</th><th>PG</th><th>PP</th><th>Pts</th></tr>`;
 
     lista.forEach((j,idx)=>{
       let classe=idx<4?"primeira":"segunda";
-      let linhaExtra = idx === 3 ? "linha-apuramento" : "";
+      let linha = idx===3?"linha":"";
 
       tabela.innerHTML+=`
-      <tr class="${classe} ${linhaExtra}">
+      <tr class="${classe} ${linha}">
         <td>${idx+1}</td>
         <td>${j.nome}</td>
         <td>${j.pg}</td>
         <td>${j.pp}</td>
         <td>${j.pts}</td>
-        <td id="forma-${id}-${j.nome}">-</td>
       </tr>`;
     });
-
-    atualizarForma(id);
-  });
-
-  // atualizar cores jogos
-  setTimeout(criar, 100);
-}
-
-// 🔥 FORMA
-function atualizarForma(id){
-
-  grupos[id].forEach(jogador=>{
-    let resultados=[];
-
-    jornadas.forEach((jornada,j)=>{
-      jornada.forEach((jogo,i)=>{
-
-        let p1=grupos[id][jogo[0]-1];
-        let p2=grupos[id][jogo[1]-1];
-
-        let a=document.querySelector(`[data-id="${id}-${j}-${i}-1"]`);
-        let b=document.querySelector(`[data-id="${id}-${j}-${i}-2"]`);
-
-        let va=Number(a?.value)||0;
-        let vb=Number(b?.value)||0;
-
-        if(p1===jogador){
-          if(va>vb) resultados.push("V");
-          else if(vb>va) resultados.push("D");
-        }
-
-        if(p2===jogador){
-          if(vb>va) resultados.push("V");
-          else if(va>vb) resultados.push("D");
-        }
-
-      });
-    });
-
-    let ultimos = resultados.slice(-5).map(r=>{
-      return r==="V" ? "🟢" : "🔴";
-    }).join("");
-
-    document.getElementById(`forma-${id}-${jogador}`).innerHTML = ultimos || "-";
   });
 }
 
