@@ -4,7 +4,7 @@
 <title>Liga Individual Europa</title><script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script><script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script><style>
 body {
   font-family: 'Segoe UI', Arial;
-  background:#020617;
+  background:#0f172a;
   color:white;
   padding:15px;
 }
@@ -23,7 +23,7 @@ h1 { text-align:center; }
 }
 
 .card {
-  background:#0f172a;
+  background:#1e293b;
   border-radius:12px;
   padding:15px;
   margin-bottom:20px;
@@ -33,7 +33,7 @@ h1 { text-align:center; }
   display:flex;
   justify-content:space-between;
   align-items:center;
-  background:#020617;
+  background:#0f172a;
   padding:10px;
   border-radius:8px;
   margin-bottom:6px;
@@ -50,7 +50,7 @@ input {
   text-align:center;
   border-radius:6px;
   border:none;
-  background:#1e293b;
+  background:#334155;
   color:white;
   font-size:16px;
 }
@@ -60,7 +60,7 @@ input {
 
 .tabela {
   margin-top:10px;
-  background:#020617;
+  background:#0f172a;
   border-radius:10px;
   padding:10px;
 }
@@ -71,7 +71,7 @@ input {
 }
 
 .tabela th {
-  background:#0f172a;
+  background:#1e293b;
   color:#94a3b8;
   font-weight:600;
 }
@@ -82,7 +82,7 @@ input {
 }
 
 .top4 { background:#1e3a8a; }
-.ultimos { background:#020617; }
+.ultimos { background:#0f172a; }
 
 .linha { border-bottom:2px solid #facc15; }
 
@@ -258,12 +258,10 @@ function calcular(){
       let c = idx<4?"top4":"ultimos";
       let l = idx===3?"linha":"";
 
-      let medalha = idx<4 ? "🏆 " : "";
-
       t.innerHTML+=`
       <tr class="${c} ${l}">
         <td>${idx+1}</td>
-        <td>${medalha}${j.nome}</td>
+        <td>${j.nome}</td>
         <td>${j.pg}</td>
         <td>${j.pp}</td>
         <td>${j.pts}</td>
