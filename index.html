@@ -2,13 +2,73 @@
 <head>
 <meta charset="UTF-8">
 <title>Liga Individual Europa</title><script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script><script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script><style>
-body { font-family: Arial; background:#0f172a; color:white; padding:20px; }
-h1{text-align:center;}
-table{width:100%; margin-bottom:20px;}
-td{padding:5px;}
-input{width:40px; text-align:center;}
-.primeira{background:#16a34a;}
-.segunda{background:#7f1d1d;}
+body {
+  font-family: Arial, sans-serif;
+  background:#0f172a;
+  color:white;
+  padding:20px;
+}
+
+h1 { text-align:center; margin-bottom:30px; }
+
+h2 {
+  margin-top:40px;
+  border-bottom:2px solid #334155;
+  padding-bottom:5px;
+}
+
+h3 { margin-top:20px; color:#cbd5f5; }
+
+table {
+  width:100%;
+  border-collapse:collapse;
+  margin-bottom:20px;
+  background:#1e293b;
+  border-radius:10px;
+  overflow:hidden;
+}
+
+td, th { padding:12px; text-align:center; }
+
+tr { border-bottom:1px solid #334155; }
+tr:last-child { border-bottom:none; }
+
+input {
+  width:45px;
+  padding:6px;
+  text-align:center;
+  border-radius:6px;
+  border:none;
+  background:#020617;
+  color:white;
+  font-weight:bold;
+}
+
+td.primeira { background:#065f46; }
+td.segunda { background:#7f1d1d; }
+
+.primeira { background:#064e3b; }
+.segunda { background:#7f1d1d; }
+
+.linha-apuramento {
+  border-bottom:3px solid #facc15 !important;
+}
+
+#login {
+  text-align:center;
+  margin-bottom:30px;
+}
+
+button {
+  padding:6px 12px;
+  border:none;
+  border-radius:6px;
+  background:#2563eb;
+  color:white;
+  cursor:pointer;
+}
+
+button:hover { background:#1d4ed8; }
 </style></head><body><h1>LIGA INDIVIDUAL EUROPA</h1><div id="login">
 <h3>Modo operador</h3>
 <input type="password" id="pass" placeholder="Código">
@@ -57,13 +117,13 @@ const jornadas = [
  [[7,2],[6,3],[5,4]]
 ];
 
-// 🔥 CRIAR UI
+// 🔥 UI
 function criar(){
 
   let html="";
 
   Object.keys(grupos).forEach(id=>{
-    html+=`<h2>${id}</h2>`;
+    html+=`<h2>${id.toUpperCase()}</h2>`;
 
     jornadas.forEach((jornada,j)=>{
       html+=`<h3>Jornada ${j+1}</h3><table>`;
@@ -72,15 +132,29 @@ function criar(){
         let p1=grupos[id][jogo[0]-1];
         let p2=grupos[id][jogo[1]-1];
 
+        let a = Number(document.querySelector(`[data-id="${id}-${j}-${i}-1"]`)?.value) || 0;
+        let b = Number(document.querySelector(`[data-id="${id}-${j}-${i}-2"]`)?.value) || 0;
+
+        let classe1 = "";
+        let classe2 = "";
+
+        if(a > b){
+          classe1 = "primeira";
+          classe2 = "segunda";
+        } else if(b > a){
+          classe2 = "primeira";
+          classe1 = "segunda";
+        }
+
         html+=`
         <tr>
-          <td>${p1}</td>
+          <td class="${classe1}"><strong>${p1}</strong></td>
           <td>
             <input ${editavel?"":"disabled"} data-id="${id}-${j}-${i}-1" onchange="guardar(this)">
             -
             <input ${editavel?"":"disabled"} data-id="${id}-${j}-${i}-2" onchange="guardar(this)">
           </td>
-          <td>${p2}</td>
+          <td class="${classe2}"><strong>${p2}</strong></td>
         </tr>`;
       });
 
@@ -89,7 +163,7 @@ function criar(){
 
     html+=`<h3>Classificação</h3>
     <table id="class-${id}">
-    <tr><th>#</th><th>Jogador</th><th>PG</th><th>PP</th><th>Pontos</th></tr>
+    <tr><th>#</th><th>Jogador</th><th>PG</th><th>PP</th><th>Pts</th><th>Forma</th></tr>
     </table>`;
   });
 
@@ -117,8 +191,12 @@ db.ref("resultados").on("value", snap=>{
 function calcular(){
 
   Object.keys(grupos).forEach(id=>{
-    let stats={};
-    grupos[id].forEach(j=>stats[j]={pg:0,pp:0});
+    let stats={}, confrontos={};
+
+    grupos[id].forEach(j=>{
+      stats[j]={pg:0,pp:0};
+      confrontos[j]={};
+    });
 
     jornadas.forEach((jornada,j)=>{
       jornada.forEach((jogo,i)=>{
@@ -135,6 +213,9 @@ function calcular(){
         stats[p1].pp+=vb;
         stats[p2].pg+=vb;
         stats[p2].pp+=va;
+
+        confrontos[p1][p2]=va-vb;
+        confrontos[p2][p1]=vb-va;
       });
     });
 
@@ -142,29 +223,82 @@ function calcular(){
       nome:j,
       pg:stats[j].pg,
       pp:stats[j].pp,
-      pts:stats[j].pg
+      pts:stats[j].pg,
+      diff:stats[j].pg - stats[j].pp
     }));
 
-    lista.sort((a,b)=>b.pts-a.pts);
+    lista.sort((a,b)=>{
+      if(b.pts !== a.pts) return b.pts - a.pts;
+      if(b.diff !== a.diff) return b.diff - a.diff;
+      let cd = confrontos[a.nome]?.[b.nome] || 0;
+      return -cd;
+    });
 
     let tabela=document.getElementById("class-"+id);
-    tabela.innerHTML=`<tr><th>#</th><th>Jogador</th><th>PG</th><th>PP</th><th>Pontos</th></tr>`;
+    tabela.innerHTML=`<tr><th>#</th><th>Jogador</th><th>PG</th><th>PP</th><th>Pts</th><th>Forma</th></tr>`;
 
     lista.forEach((j,idx)=>{
       let classe=idx<4?"primeira":"segunda";
+      let linhaExtra = idx === 3 ? "linha-apuramento" : "";
+
       tabela.innerHTML+=`
-      <tr class="${classe}">
+      <tr class="${classe} ${linhaExtra}">
         <td>${idx+1}</td>
         <td>${j.nome}</td>
         <td>${j.pg}</td>
         <td>${j.pp}</td>
         <td>${j.pts}</td>
+        <td id="forma-${id}-${j.nome}">-</td>
       </tr>`;
     });
+
+    atualizarForma(id);
+  });
+
+  // atualizar cores jogos
+  setTimeout(criar, 100);
+}
+
+// 🔥 FORMA
+function atualizarForma(id){
+
+  grupos[id].forEach(jogador=>{
+    let resultados=[];
+
+    jornadas.forEach((jornada,j)=>{
+      jornada.forEach((jogo,i)=>{
+
+        let p1=grupos[id][jogo[0]-1];
+        let p2=grupos[id][jogo[1]-1];
+
+        let a=document.querySelector(`[data-id="${id}-${j}-${i}-1"]`);
+        let b=document.querySelector(`[data-id="${id}-${j}-${i}-2"]`);
+
+        let va=Number(a?.value)||0;
+        let vb=Number(b?.value)||0;
+
+        if(p1===jogador){
+          if(va>vb) resultados.push("V");
+          else if(vb>va) resultados.push("D");
+        }
+
+        if(p2===jogador){
+          if(vb>va) resultados.push("V");
+          else if(va>vb) resultados.push("D");
+        }
+
+      });
+    });
+
+    let ultimos = resultados.slice(-5).map(r=>{
+      return r==="V" ? "🟢" : "🔴";
+    }).join("");
+
+    document.getElementById(`forma-${id}-${jogador}`).innerHTML = ultimos || "-";
   });
 }
 
-// 🔥 ARRANQUE
+// 🔥 START
 window.onload = () => {
   criar();
 };
