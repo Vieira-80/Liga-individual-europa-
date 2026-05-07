@@ -1,7 +1,11 @@
 <!DOCTYPE html><html lang="pt">
 <head>
 <meta charset="UTF-8">
-<title>Liga Individual Europa</title><script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script><script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script><style>
+<title>Liga Individual Europa</title>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
+<style>
 body {
   font-family: 'Segoe UI', Arial;
   background:#0f172a;
@@ -81,8 +85,9 @@ input {
   text-align:center;
 }
 
-.top4 { background:#1e3a8a; }
-.ultimos { background:#0f172a; }
+.apurado { background:#1e3a8a; }
+.melhor6 { background:#92400e; color:#fef3c7; font-weight:bold; }
+.naoapurado { background:#0f172a; }
 
 .linha { border-bottom:2px solid #facc15; }
 
@@ -92,10 +97,16 @@ input {
   opacity:0.8;
   text-align:center;
 }
-</style></head><body><button id="adminBtn" onclick="login()">⚙️</button>
+</style>
+</head>
 
-<h1>LIGA INDIVIDUAL EUROPA</h1><div id="app"></div><script>
+<body>
+<button id="adminBtn" onclick="login()">⚙️</button>
 
+<h1>LIGA INDIVIDUAL EUROPA</h1>
+<div id="app"></div>
+
+<script>
 const PASSWORD = "1234";
 let editavel = false;
 
@@ -137,6 +148,12 @@ const jornadas = [
 ];
 
 let dadosGlobais = {};
+let rankingsGlobais = {};
+let melhorSextoGlobal = null;
+
+function valorValido(v){
+  return v !== undefined && v !== null && v !== "" && !Number.isNaN(Number(v));
+}
 
 function criar(){
   let html="";
@@ -157,7 +174,7 @@ function criar(){
         let b = dadosGlobais[`${id}-${j}-${i}-2`] || "";
 
         let c1="", c2="";
-        if(a!=="" && b!==""){
+        if(valorValido(a) && valorValido(b)){
           if(Number(a)>Number(b)){ c1="vencedor"; c2="derrotado"; }
           else if(Number(b)>Number(a)){ c2="vencedor"; c1="derrotado"; }
         }
@@ -177,11 +194,11 @@ function criar(){
 
     html+=`<div class="tabela">
     <table id="class-${id}">
-    <tr><th>#</th><th>Jogador</th><th>JG</th><th>PG</th><th>PP</th><th>Pts</th></tr>
+    <tr><th>#</th><th>Jogador</th><th>JG</th><th>PG</th><th>PP</th><th>DP</th><th>Pts</th></tr>
     </table>
     <div class="legenda">
-      <p>* Azul = Top 4 (1ª categoria)</p>
-      <p>* Restantes = 2ª categoria</p>
+      <p>* Azul = 5 primeiros apurados</p>
+      <p>* Dourado = melhor 6.º lugar apurado</p>
     </div>
     </div></div>`;
   });
@@ -189,11 +206,12 @@ function criar(){
   document.getElementById("app").innerHTML=html;
 
   aplicarPermissoes();
-  calcular();
 
   document.querySelectorAll("input").forEach(i=>{
     i.oninput = guardar;
   });
+
+  calcular();
 }
 
 function guardar(){
@@ -217,84 +235,124 @@ function aplicarPermissoes(){
   });
 }
 
-function calcular(){
+function calcularRankingGrupo(id){
+  let stats={}, confrontos={};
 
-  Object.keys(grupos).forEach(id=>{
-    let stats={}, confrontos={};
+  grupos[id].forEach(j=>{
+    stats[j]={pg:0,pp:0,jg:0,diff:0};
+    confrontos[j]={};
+  });
 
-    grupos[id].forEach(j=>{
-      stats[j]={pg:0,pp:0,jg:0};
-      confrontos[j]={};
-    });
+  jornadas.forEach((jornada,j)=>{
+    jornada.forEach((jogo,i)=>{
 
-    jornadas.forEach((jornada,j)=>{
-      jornada.forEach((jogo,i)=>{
+      let p1=grupos[id][jogo[0]-1];
+      let p2=grupos[id][jogo[1]-1];
 
-        let p1=grupos[id][jogo[0]-1];
-        let p2=grupos[id][jogo[1]-1];
+      let a = dadosGlobais[`${id}-${j}-${i}-1`];
+      let b = dadosGlobais[`${id}-${j}-${i}-2`];
 
-        let a = dadosGlobais[`${id}-${j}-${i}-1`];
-        let b = dadosGlobais[`${id}-${j}-${i}-2`];
+      if(valorValido(a) && valorValido(b)){
 
-        if(a !== "" && b !== "" && a !== undefined && b !== undefined){
+        let va = Number(a);
+        let vb = Number(b);
 
-          let va = Number(a);
-          let vb = Number(b);
+        stats[p1].pg += va;
+        stats[p1].pp += vb;
+        stats[p2].pg += vb;
+        stats[p2].pp += va;
 
-          stats[p1].pg += va;
-          stats[p1].pp += vb;
-          stats[p2].pg += vb;
-          stats[p2].pp += va;
+        stats[p1].jg += 1;
+        stats[p2].jg += 1;
 
-          stats[p1].jg += 1;
-          stats[p2].jg += 1;
+        stats[p1].diff = stats[p1].pg - stats[p1].pp;
+        stats[p2].diff = stats[p2].pg - stats[p2].pp;
 
-          confrontos[p1][p2] = va - vb;
-          confrontos[p2][p1] = vb - va;
-        }
-
-      });
-    });
-
-    let lista = grupos[id].map(j=>({
-      nome:j,
-      pg:stats[j].pg,
-      pp:stats[j].pp,
-      jg:stats[j].jg,
-      pts:stats[j].pg,
-      diff:stats[j].pg - stats[j].pp
-    }));
-
-    lista.sort((a,b)=>{
-      if(b.pts !== a.pts) return b.pts - a.pts;
-
-      let cd = confrontos[a.nome]?.[b.nome];
-      if(cd !== undefined && cd !== 0){
-        return -cd;
+        confrontos[p1][p2] = va - vb;
+        confrontos[p2][p1] = vb - va;
       }
 
-      return b.diff - a.diff;
     });
+  });
 
+  let lista = grupos[id].map(j=>({
+    grupo:id,
+    nome:j,
+    pg:stats[j].pg,
+    pp:stats[j].pp,
+    jg:stats[j].jg,
+    pts:stats[j].pg,
+    diff:stats[j].diff
+  }));
+
+  lista.sort((a,b)=>{
+    if(b.pts !== a.pts) return b.pts - a.pts;
+
+    let cd = confrontos[a.nome]?.[b.nome];
+    if(cd !== undefined && cd !== 0){
+      return -cd;
+    }
+
+    if(b.diff !== a.diff) return b.diff - a.diff;
+    return b.pg - a.pg;
+  });
+
+  return lista;
+}
+
+function calcular(){
+
+  rankingsGlobais = {};
+  let sextos = [];
+
+  Object.keys(grupos).forEach(id=>{
+    let lista = calcularRankingGrupo(id);
+    rankingsGlobais[id] = lista;
+
+    if(lista[5]){
+      sextos.push(lista[5]);
+    }
+  });
+
+  sextos.sort((a,b)=>{
+    if(b.pts !== a.pts) return b.pts - a.pts;
+    if(b.diff !== a.diff) return b.diff - a.diff;
+    if(b.pg !== a.pg) return b.pg - a.pg;
+    if(a.pp !== b.pp) return a.pp - b.pp;
+    return a.nome.localeCompare(b.nome);
+  });
+
+  melhorSextoGlobal = sextos[0] || null;
+
+  Object.keys(grupos).forEach(id=>{
+    let lista = rankingsGlobais[id];
     let t=document.getElementById("class-"+id);
-    t.innerHTML="<tr><th>#</th><th>Jogador</th><th>JG</th><th>PG</th><th>PP</th><th>Pts</th></tr>";
+
+    t.innerHTML="<tr><th>#</th><th>Jogador</th><th>JG</th><th>PG</th><th>PP</th><th>DP</th><th>Pts</th></tr>";
 
     lista.forEach((j,idx)=>{
-      let c = idx<4?"top4":"ultimos";
-      let l = idx===3?"linha":"";
+
+      let melhor6 = melhorSextoGlobal &&
+                    j.nome === melhorSextoGlobal.nome &&
+                    j.grupo === melhorSextoGlobal.grupo &&
+                    idx === 5;
+
+      let c = idx<5 ? "apurado" : melhor6 ? "melhor6" : "naoapurado";
+      let l = idx===4 ? "linha" : "";
 
       t.innerHTML+=`
       <tr class="${c} ${l}">
         <td>${idx+1}</td>
-        <td>${j.nome}</td>
+        <td>${j.nome}${melhor6 ? " ⭐" : ""}</td>
         <td>${j.jg}</td>
         <td>${j.pg}</td>
         <td>${j.pp}</td>
+        <td>${j.diff}</td>
         <td>${j.pts}</td>
       </tr>`;
     });
   });
 }
-
-</script></body>
+</script>
+</body>
 </html>
